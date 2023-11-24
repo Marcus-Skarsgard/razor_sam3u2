@@ -63,6 +63,7 @@ Global variable definitions with scope limited to this local application.
 Variable names shall start with "UserApp1_<type>" and be declared as static.
 ***********************************************************************************************************************/
 static u8 au8UserInputBuffer[USER1_INPUT_BUFFER_SIZE]; //Char buffer
+static const u8 au8NameBuffer[7] = {'M', 'a', 'r', 'c', 'u', 's', '\0'};
 
 static fnCode_type UserApp1_pfStateMachine;               /*!< @brief The state machine function pointer */
 //static u32 UserApp1_u32Timeout;                           /*!< @brief Timeout counter used across states */
@@ -150,27 +151,43 @@ State Machine Function Definitions
 /* What does this state do? */
 static void UserApp1SM_Idle(void)
 {
-  static u8 u8NumCharsMessage[] = "\n\rCharacters in buffer: ";
-  static u8 u8BufferMessage[] = "\n\rBuffer contents:\n\r";
-  u8 u8CharCount;
   
-  if (WasButtonPressed(BUTTON1)){
+  static u8 u8NameMessage[] = "\n\rMarcus has been typed this many times:\n\r";
+  static u8 u8NameCount = 0;
+  static char *u8RecentNameIndexPtr = NULL;
+  static char u8ConsumedCharacters[USER1_INPUT_BUFFER_SIZE + 8];
+  static char *u8PastNameIndexPtr = u8ConsumedCharacters;
+  static u8 u8Inst = 0;
+  
+  if (u8Inst == 0) {
+    for (u8 i = 0; i < USER1_INPUT_BUFFER_SIZE + 8; i++){
+      u8ConsumedCharacters[i] = 0;
+    }
+    u8Inst++;
+  }
+  
+  if (WasButtonPressed(BUTTON1)){ 
     ButtonAcknowledge(BUTTON1);
-    
-    u8CharCount = DebugScanf(au8UserInputBuffer);
-    
-    DebugPrintf(u8BufferMessage);
-    DebugPrintf(au8UserInputBuffer);
-    DebugLineFeed();
+    DebugScanf(au8UserInputBuffer);
+    strcat(u8ConsumedCharacters, (char *) au8UserInputBuffer);
+    u8Inst++;
   }
   
-  if (WasButtonPressed(BUTTON0)){
+  
+  u8RecentNameIndexPtr = strstr(u8PastNameIndexPtr + 1, (char *) au8NameBuffer);
+  if (u8RecentNameIndexPtr != NULL && u8Inst == 1) {
+    u8NameCount++;
+    u8PastNameIndexPtr = u8RecentNameIndexPtr;
+    u8RecentNameIndexPtr = NULL;
+  }
+  
+  if (WasButtonPressed(BUTTON0)){ //test to see how many times Name has been typed
     ButtonAcknowledge(BUTTON0);
-    
-    DebugPrintf(u8NumCharsMessage);
-    DebugPrintNumber(G_u8DebugScanfCharCount);
+    DebugPrintf(u8NameMessage);
+    DebugPrintNumber(u8NameCount);
     DebugLineFeed();
   }
+  //u8CharCount = DebugScanf(au8UserInputBuffer);
   
 } /* end UserApp1SM_Idle() */
      
